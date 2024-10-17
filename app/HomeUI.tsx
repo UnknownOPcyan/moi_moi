@@ -18,7 +18,12 @@ interface HomeUIProps {
   handleClaim3: () => void;
   handleStartFarming: () => void;
   handleStopFarming: () => void;
+
+  // Add these two new props:
+  isFarming: boolean;          // Whether farming is active
+  farmingPoints: number;       // The current farming points
 }
+
 
 export default function HomeUI({
   user,

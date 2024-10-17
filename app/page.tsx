@@ -22,6 +22,7 @@ export default function Home() {
   const [buttonStage3, setButtonStage3] = useState<'check' | 'claim' | 'claimed'>('check')
   const [isLoading, setIsLoading] = useState(false)
   const [isFarming, setIsFarming] = useState(false)
+  const [farmingPoints, setFarmingPoints] = useState(0)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
@@ -75,12 +76,37 @@ export default function Home() {
       const data = await res.json()
       if (data.success) {
         setIsFarming(true)
+        startFarmingPoints()
       } else {
         setError('Failed to start farming')
       }
     } catch {
       setError('An error occurred while starting farming')
     }
+  }
+
+  const startFarmingPoints = () => {
+    let totalPoints = 0
+    let farmingInterval = setInterval(async () => {
+      if (totalPoints >= 30 || !isFarming) {
+        clearInterval(farmingInterval)
+        return
+      }
+      totalPoints += 1
+      setFarmingPoints((prev) => prev + 1)
+      const res = await fetch('/api/increase-points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ telegramId: user.telegramId, pointsToAdd: 1, buttonId: 'farming' }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        clearInterval(farmingInterval)
+        setError('Failed to increase points during farming')
+      }
+    }, 1000) // Increases points every second
   }
 
   const handleStopFarming = async () => {
@@ -99,6 +125,7 @@ export default function Home() {
         setUser({ ...user, points: data.points })
         setIsFarming(false)
         setNotification(`Farming stopped. Earned ${data.farmedAmount} PixelDogs!`)
+        setFarmingPoints(0) // Reset farming points
         setTimeout(() => setNotification(''), 3000)
       } else {
         setError('Failed to stop farming')
@@ -153,7 +180,6 @@ export default function Home() {
     }
   }
 
-
   const handleClaim1 = () => {
     if (buttonStage1 === 'claim') {
       setIsLoading(true)
@@ -193,6 +219,8 @@ export default function Home() {
       buttonStage3={buttonStage3}
       isLoading={isLoading}
       notification={notification}
+      isFarming={isFarming}
+      farmingPoints={farmingPoints}
       handleButtonClick1={handleButtonClick1}
       handleButtonClick2={handleButtonClick2}
       handleButtonClick3={handleButtonClick3}

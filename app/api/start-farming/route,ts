@@ -17,6 +17,17 @@ export async function POST(req: NextRequest) {
             }
         });
 
+        // Initialize farm points entry if not exists
+        let farmPoints = await prisma.farmPoints.findUnique({
+            where: { telegramId }
+        });
+
+        if (!farmPoints) {
+            farmPoints = await prisma.farmPoints.create({
+                data: { telegramId, points: 0 }
+            });
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error starting farming:', error);

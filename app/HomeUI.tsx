@@ -89,9 +89,9 @@ export default function HomeUI({
         <p id="pixelDogsCount" className="pixel-dogs-count">
           {user.points} PixelDogs
         </p>
-      <p id="updateText" className="update-text fade fade-in">
-        Exciting updates are on the way:)
-      </p>
+        <p id="updateText" className="update-text fade fade-in">
+          Exciting updates are on the way:)
+        </p>
         <div className="tasks-container">
           <button className="tasks-button">Daily Tasks..!</button>
           <div className="social-container">

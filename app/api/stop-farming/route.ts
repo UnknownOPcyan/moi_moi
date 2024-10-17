@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         const farmingDuration = Math.min(60, Math.floor((new Date().getTime() - user.farmStartTime.getTime()) / 1000));
         const farmedAmount = Math.floor(farmingDuration / 2) * 0.5;
 
-        // Update the farm points and user's total points
+        // Update the user's points and farm amount
         const updatedUser = await prisma.user.update({
             where: { telegramId },
             data: { 
@@ -30,9 +30,13 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        await prisma.farmPoints.update({
-            where: { telegramId },
-            data: { points: { increment: farmedAmount } }
+        // Store the farming points in the FarmingPoint model
+        await prisma.farmingPoint.create({
+            data: {
+                userId: user.id,  // Reference to the user who farmed
+                points: farmedAmount, // Amount of points earned
+                createdAt: new Date(), // Current time
+            }
         });
 
         return NextResponse.json({ 

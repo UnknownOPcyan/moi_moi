@@ -23,4 +23,13 @@ model User {
   updatedAt     DateTime @updatedAt
   farmStartTime DateTime?
   farmAmount    Int       @default(0)
+  farmingPoints FarmingPoint[] @relation("UserFarmingPoints") // Relationship to FarmingPoint model
+}
+
+model FarmingPoint {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  points    Int
+  createdAt DateTime @default(now())
+  user      User     @relation("UserFarmingPoints", fields: [userId], references: [id])
 }

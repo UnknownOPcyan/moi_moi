@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'; // Ensure React is imported
+import React, { useEffect, useState } from 'react'; 
 import Link from 'next/link';
-import { toggleUpdateText } from './utils'; // Import the function from utils.js
-import './HomeUI.css'; // Import your CSS file
+import { toggleUpdateText } from './utils';
+import './HomeUI.css'; 
 
 interface HomeUIProps {
   user: any;
@@ -18,12 +18,11 @@ interface HomeUIProps {
   handleClaim3: () => void;
   handleStartFarming: () => void;
   handleStopFarming: () => void;
-
-  // Add these two new props:
-  isFarming: boolean;          // Whether farming is active
-  farmingPoints: number;       // The current farming points
+  
+  // New props
+  isFarming: boolean;
+  farmingPoints: number;
 }
-
 
 export default function HomeUI({
   user,
@@ -40,8 +39,9 @@ export default function HomeUI({
   handleClaim3,
   handleStartFarming,
   handleStopFarming,
+  isFarming,        // New prop
+  farmingPoints,    // New prop
 }: HomeUIProps) {
-  const [isFarming, setIsFarming] = useState(false);
   const [farmingTime, setFarmingTime] = useState(0);
   const [farmedAmount, setFarmedAmount] = useState(0);
 
@@ -76,8 +76,6 @@ export default function HomeUI({
     } else {
       handleStartFarming();
     }
-    setIsFarming(!isFarming);
-    setFarmingTime(0);
     setFarmedAmount(0);
   };
 
@@ -95,7 +93,7 @@ export default function HomeUI({
           {user.points} PixelDogs
         </p>
         <p id="updateText" className="update-text fade fade-in">
-          Exciting updates are on the way:)
+          Exciting updates are on the way :)
         </p>
         <div className="tasks-container">
           <button className="tasks-button">Daily Tasks..!</button>
@@ -151,7 +149,7 @@ export default function HomeUI({
         onClick={handleFarmClick}
       >
         {isFarming 
-          ? `Farming... ${farmedAmount.toFixed(1)} PD (${60 - farmingTime}s left)` 
+          ? `Farming... ${farmingPoints.toFixed(1)} PD (${60 - farmingTime}s left)` 
           : 'Farm PixelDogs...'}
       </button>
       <div className="footer-container">

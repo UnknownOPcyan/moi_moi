@@ -1,38 +1,52 @@
-// root/app/api/start-farming/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
     try {
-        const { telegramId } = await req.json();
+        const { telegramId, action } = await req.json();
 
         if (!telegramId) {
             return NextResponse.json({ error: 'Invalid telegramId' }, { status: 400 });
         }
 
-        // Ensure the user exists before starting farming
-        const user = await prisma.user.findUnique({
-            where: { telegramId },
-        });
+        if (action === 'start') {
+            // Start farming: only set the farm start time
+            await prisma.user.update({
+                where: { telegramId },
+                data: { farmStartTime: new Date() }
+            });
 
-        if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            return NextResponse.json({ success: true, status: 'farming_started' });
+        } else if (action === 'claim') {
+            // Claim the accumulated points after 60 seconds
+            const user = await prisma.user.findUnique({ where: { telegramId } });
+
+            if (!user || !user.farmStartTime) {
+                return NextResponse.json({ error: 'User not farming' }, { status: 400 });
+            }
+
+            // Calculate total accumulated points (3 PixelDogs after 60 seconds)
+            const farmingDuration = Math.floor((new Date().getTime() - user.farmStartTime.getTime()) / 1000);
+            const farmedPoints = Math.min(3, (farmingDuration * 0.05).toFixed(2)); // Incremental farming logic
+
+            const updatedUser = await prisma.user.update({
+                where: { telegramId },
+                data: {
+                    points: { increment: farmedPoints },  // Add accumulated points to total
+                    farmStartTime: null // Reset farming status
+                }
+            });
+
+            return NextResponse.json({
+                success: true,
+                points: updatedUser.points,
+                status: 'farming_complete'
+            });
         }
 
-        // Start farming logic
-        const farmStartTime = new Date();
-
-        await prisma.farmingPoint.create({
-            data: {
-                telegramId: user.telegramId,
-                farmStartTime,
-                farmAmount: 0,  // Initialize farmAmount with 0
-            },
-        });
-
-        return NextResponse.json({ success: true, message: "Farming started!" });
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     } catch (error) {
-        console.error('Error starting farming:', error);
+        console.error('Error during farming process:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

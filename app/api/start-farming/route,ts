@@ -1,3 +1,4 @@
+// root/app/api/start-farming/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -9,26 +10,27 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid telegramId' }, { status: 400 });
         }
 
-        const user = await prisma.user.update({
+        // Ensure the user exists before starting farming
+        const user = await prisma.user.findUnique({
             where: { telegramId },
-            data: { 
-                farmStartTime: new Date(),
-                farmAmount: 0
-            }
         });
 
-        // Initialize farm points entry if not exists
-        let farmPoints = await prisma.farmPoints.findUnique({
-            where: { telegramId }
-        });
-
-        if (!farmPoints) {
-            farmPoints = await prisma.farmPoints.create({
-                data: { telegramId, points: 0 }
-            });
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true });
+        // Start farming logic
+        const farmStartTime = new Date();
+
+        await prisma.farmingPoint.create({
+            data: {
+                telegramId: user.telegramId,
+                farmStartTime,
+                farmAmount: 0,  // Initialize farmAmount with 0
+            },
+        });
+
+        return NextResponse.json({ success: true, message: "Farming started!" });
     } catch (error) {
         console.error('Error starting farming:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

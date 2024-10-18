@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import HomeUI from './HomeUI'; // Ensure correct import path
-import { fetchUser, startFarming, stopFarming } from './api'; // Import your API functions
+import { fetchUser } from './api/fetchUser'; // Update these imports
+import { startFarming } from './api/startFarming'; // Update these imports
+import { stopFarming } from './api/stopFarming'; // Update these imports
 
 export default function Page() {
   const [user, setUser] = useState<any>(null);

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState } from 'react'; // Ensure React is imported
 import Link from 'next/link';
-import { toggleUpdateText } from './utils'; 
-import './HomeUI.css'; 
+import { toggleUpdateText } from './utils'; // Import the function from utils.js
+import './HomeUI.css'; // Import your CSS file
 
 interface HomeUIProps {
   user: any;
@@ -18,6 +18,8 @@ interface HomeUIProps {
   handleClaim3: () => void;
   handleStartFarming: () => Promise<void>;
   handleStopFarming: () => Promise<void>;
+  isFarming: boolean; // Add this prop
+  farmingPoints: number; // Add this prop
 }
 
 export default function HomeUI({
@@ -35,8 +37,9 @@ export default function HomeUI({
   handleClaim3,
   handleStartFarming,
   handleStopFarming,
+  isFarming,
+  farmingPoints,
 }: HomeUIProps) {
-  const [isFarming, setIsFarming] = useState(false);
   const [farmingTime, setFarmingTime] = useState(0);
   const [farmedAmount, setFarmedAmount] = useState(0);
 
@@ -65,13 +68,12 @@ export default function HomeUI({
     return () => clearInterval(interval);
   }, [isFarming]);
 
-  const handleFarmClick = async () => {
+  const handleFarmClick = () => {
     if (isFarming) {
-      await handleStopFarming();
+      handleStopFarming();
     } else {
-      await handleStartFarming();
+      handleStartFarming();
     }
-    setIsFarming(!isFarming);
     setFarmingTime(0);
     setFarmedAmount(0);
   };
@@ -89,9 +91,9 @@ export default function HomeUI({
         <p id="pixelDogsCount" className="pixel-dogs-count">
           {user.points} PixelDogs
         </p>
-      <p id="updateText" className="update-text fade fade-in">
-        Exciting updates are on the way:)
-      </p>
+        <p id="updateText" className="update-text fade fade-in">
+          Exciting updates are on the way:)
+        </p>
         <div className="tasks-container">
           <button className="tasks-button">Daily Tasks..!</button>
           <div className="social-container">
@@ -109,7 +111,13 @@ export default function HomeUI({
                 buttonStage1 === 'claimed' || isLoading ? 'disabled' : ''
               }`}
             >
-              {isLoading ? 'Claiming...' : buttonStage1 === 'check' ? 'Check' : buttonStage1 === 'claim' ? 'Claim' : 'Claimed'}
+              {isLoading
+                ? 'Claiming...'
+                : buttonStage1 === 'check'
+                ? 'Check'
+                : buttonStage1 === 'claim'
+                ? 'Claim'
+                : 'Claimed'}
             </button>
           </div>
           <div className="social-container">
@@ -122,7 +130,11 @@ export default function HomeUI({
               disabled={buttonStage2 === 'claimed'}
               className="claim-button"
             >
-              {buttonStage2 === 'check' ? 'Check' : buttonStage2 === 'claim' ? 'Claim' : 'Claimed'}
+              {buttonStage2 === 'check'
+                ? 'Check'
+                : buttonStage2 === 'claim'
+                ? 'Claim'
+                : 'Claimed'}
             </button>
           </div>
           <div className="social-container">
@@ -135,18 +147,19 @@ export default function HomeUI({
               disabled={buttonStage3 === 'claimed'}
               className="claim-button"
             >
-              {buttonStage3 === 'check' ? 'Check' : buttonStage3 === 'claim' ? 'Claim' : 'Claimed'}
+              {buttonStage3 === 'check'
+                ? 'Check'
+                : buttonStage3 === 'claim'
+                ? 'Claim'
+                : 'Claimed'}
             </button>
           </div>
         </div>
       </div>
       <div className="flex-grow"></div>
-      <button 
-        className="farm-button" 
-        onClick={handleFarmClick}
-      >
-        {isFarming 
-          ? `Farming... ${farmedAmount.toFixed(1)} PD (${60 - farmingTime}s left)` 
+      <button className="farm-button" onClick={handleFarmClick}>
+        {isFarming
+          ? `Farming... ${farmingPoints.toFixed(1)} PD (${60 - farmingTime}s left)`
           : 'Farm PixelDogs...'}
       </button>
       <div className="footer-container">

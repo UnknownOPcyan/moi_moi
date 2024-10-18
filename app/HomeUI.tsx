@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'; 
 import Link from 'next/link';
-import { toggleUpdateText } from './utils';
+import { toggleUpdateText } from './utils'; 
 import './HomeUI.css'; 
 
 interface HomeUIProps {
@@ -16,12 +16,8 @@ interface HomeUIProps {
   handleClaim1: () => void;
   handleClaim2: () => void;
   handleClaim3: () => void;
-  handleStartFarming: () => void;
-  handleStopFarming: () => void;
-  
-  // New props
-  isFarming: boolean;
-  farmingPoints: number;
+  handleStartFarming: () => Promise<void>;
+  handleStopFarming: () => Promise<void>;
 }
 
 export default function HomeUI({
@@ -39,9 +35,8 @@ export default function HomeUI({
   handleClaim3,
   handleStartFarming,
   handleStopFarming,
-  isFarming,        // New prop
-  farmingPoints,    // New prop
 }: HomeUIProps) {
+  const [isFarming, setIsFarming] = useState(false);
   const [farmingTime, setFarmingTime] = useState(0);
   const [farmedAmount, setFarmedAmount] = useState(0);
 
@@ -70,12 +65,14 @@ export default function HomeUI({
     return () => clearInterval(interval);
   }, [isFarming]);
 
-  const handleFarmClick = () => {
+  const handleFarmClick = async () => {
     if (isFarming) {
-      handleStopFarming();
+      await handleStopFarming();
     } else {
-      handleStartFarming();
+      await handleStartFarming();
     }
+    setIsFarming(!isFarming);
+    setFarmingTime(0);
     setFarmedAmount(0);
   };
 
@@ -92,9 +89,9 @@ export default function HomeUI({
         <p id="pixelDogsCount" className="pixel-dogs-count">
           {user.points} PixelDogs
         </p>
-        <p id="updateText" className="update-text fade fade-in">
-          Exciting updates are on the way :)
-        </p>
+      <p id="updateText" className="update-text fade fade-in">
+        Exciting updates are on the way:)
+      </p>
         <div className="tasks-container">
           <button className="tasks-button">Daily Tasks..!</button>
           <div className="social-container">
@@ -149,7 +146,7 @@ export default function HomeUI({
         onClick={handleFarmClick}
       >
         {isFarming 
-          ? `Farming... ${farmingPoints.toFixed(1)} PD (${60 - farmingTime}s left)` 
+          ? `Farming... ${farmedAmount.toFixed(1)} PD (${60 - farmingTime}s left)` 
           : 'Farm PixelDogs...'}
       </button>
       <div className="footer-container">

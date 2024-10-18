@@ -1,187 +1,81 @@
-import React, { useEffect, useState } from 'react'; // Ensure React is imported
-import Link from 'next/link';
-import { toggleUpdateText } from './utils'; // Import the function from utils.js
-import './HomeUI.css'; // Import your CSS file
+import { useState, useEffect } from 'react';
 
-interface HomeUIProps {
-  user: any;
-  buttonStage1: 'check' | 'claim' | 'claimed';
-  buttonStage2: 'check' | 'claim' | 'claimed';
-  buttonStage3: 'check' | 'claim' | 'claimed';
-  isLoading: boolean;
-  notification: string;
-  handleButtonClick1: () => void;
-  handleButtonClick2: () => void;
-  handleButtonClick3: () => void;
-  handleClaim1: () => void;
-  handleClaim2: () => void;
-  handleClaim3: () => void;
-  handleStartFarming: () => Promise<void>;
-  handleStopFarming: () => Promise<void>;
-  isFarming: boolean; // Add this prop
-  farmingPoints: number; // Add this prop
-}
+const HomeUI = ({ user, setUser }) => {
+    const [isFarming, setIsFarming] = useState(false); // Track farming status
+    const [countdown, setCountdown] = useState(60); // Countdown for farming duration
+    const [farmedPoints, setFarmedPoints] = useState(0); // Accumulated farming points
+    const [claimable, setClaimable] = useState(false); // Track if points can be claimed
 
-export default function HomeUI({
-  user,
-  buttonStage1,
-  buttonStage2,
-  buttonStage3,
-  isLoading,
-  notification,
-  handleButtonClick1,
-  handleButtonClick2,
-  handleButtonClick3,
-  handleClaim1,
-  handleClaim2,
-  handleClaim3,
-  handleStartFarming,
-  handleStopFarming,
-  isFarming,
-  farmingPoints,
-}: HomeUIProps) {
-  const [farmingTime, setFarmingTime] = useState(0);
-  const [farmedAmount, setFarmedAmount] = useState(0);
+    // Function to start farming process
+    const startFarming = async () => {
+        if (!user) return; // Prevent if user isn't loaded
 
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css';
-    document.head.appendChild(link);
-    toggleUpdateText();
-  }, []);
+        setIsFarming(true); // Set farming to active
+        setClaimable(false); // Reset claim status
+        setCountdown(60); // Reset countdown
+        setFarmedPoints(0); // Reset farmed points
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isFarming) {
-      interval = setInterval(() => {
-        setFarmingTime((prev) => {
-          if (prev >= 60) {
-            handleStopFarming();
-            return 0;
-          }
-          return prev + 1;
+        // API call to start farming
+        await fetch('/api/start-farming', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ telegramId: user.telegramId, action: 'start' }),
         });
-        setFarmedAmount((prev) => prev + 0.5);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isFarming]);
 
-  const handleFarmClick = () => {
-    if (isFarming) {
-      handleStopFarming();
-    } else {
-      handleStartFarming();
-    }
-    setFarmingTime(0);
-    setFarmedAmount(0);
-  };
+        // Farming progress: increment points every second and countdown
+        const interval = setInterval(() => {
+            setCountdown((prev) => prev - 1); // Decrease countdown
+            setFarmedPoints((prev) => Math.min(3, (prev + 0.05).toFixed(2))); // Increment points by 0.05/sec
+        }, 1000);
 
-  return (
-    <div className="home-container">
-      <div className="header-container">
-        <div className="dog-image-container">
-          <img
-            alt="Animated style dog image"
-            className="dog-image"
-            src="https://storage.googleapis.com/a1aa/image/YlpvEfbklKRiDi8LX5Rww5U3zZZwHEUfju1qUNknpEZ6e2OnA.jpg"
-          />
+        // After 60 seconds, allow claiming
+        setTimeout(() => {
+            clearInterval(interval); // Stop farming
+            setIsFarming(false); // Reset farming status
+            setClaimable(true); // Set claimable to true
+        }, 60000); // 1 minute duration
+    };
+
+    // Function to claim farmed points
+    const claimPoints = async () => {
+        if (!user) return; // Prevent if user isn't loaded
+
+        // API call to claim farmed points
+        const res = await fetch('/api/start-farming', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ telegramId: user.telegramId, action: 'claim' }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            setClaimable(false); // Reset claimable status
+            setUser({ ...user, points: data.points }); // Update user's total points
+        }
+    };
+
+    return (
+        <div>
+            <button
+                onClick={isFarming ? null : claimable ? claimPoints : startFarming} // Button logic
+                disabled={isFarming} // Disable button during farming
+                className={isFarming ? 'disabled-button' : 'active-button'} // Style based on farming status
+            >
+                {isFarming
+                    ? `${farmedPoints} PxDogs (${countdown}s)`  // Show farming progress
+                    : claimable
+                    ? 'Claim 3 PixelDogs' // Show claim button after farming
+                    : 'Farm PixelDogs'} // Default button text
+            </button>
+
+            {/* Display user's total points */}
+            <div>Total Points: {user.points}</div>
         </div>
-        <p id="pixelDogsCount" className="pixel-dogs-count">
-          {user.points} PixelDogs
-        </p>
-        <p id="updateText" className="update-text fade fade-in">
-          Exciting updates are on the way:)
-        </p>
-        <div className="tasks-container">
-          <button className="tasks-button">Daily Tasks..!</button>
-          <div className="social-container">
-            <p className="social-text">Follow Our Youtube!</p>
-            <button
-              onClick={() => {
-                if (buttonStage1 === 'check') {
-                  handleButtonClick1();
-                } else if (buttonStage1 === 'claim') {
-                  handleClaim1();
-                }
-              }}
-              disabled={buttonStage1 === 'claimed' || isLoading}
-              className={`claim-button ${
-                buttonStage1 === 'claimed' || isLoading ? 'disabled' : ''
-              }`}
-            >
-              {isLoading
-                ? 'Claiming...'
-                : buttonStage1 === 'check'
-                ? 'Check'
-                : buttonStage1 === 'claim'
-                ? 'Claim'
-                : 'Claimed'}
-            </button>
-          </div>
-          <div className="social-container">
-            <p className="social-text">Follow Our Twitter!</p>
-            <button
-              onClick={() => {
-                handleButtonClick2();
-                handleClaim2();
-              }}
-              disabled={buttonStage2 === 'claimed'}
-              className="claim-button"
-            >
-              {buttonStage2 === 'check'
-                ? 'Check'
-                : buttonStage2 === 'claim'
-                ? 'Claim'
-                : 'Claimed'}
-            </button>
-          </div>
-          <div className="social-container">
-            <p className="social-text">Join Our Telegram!</p>
-            <button
-              onClick={() => {
-                handleButtonClick3();
-                handleClaim3();
-              }}
-              disabled={buttonStage3 === 'claimed'}
-              className="claim-button"
-            >
-              {buttonStage3 === 'check'
-                ? 'Check'
-                : buttonStage3 === 'claim'
-                ? 'Claim'
-                : 'Claimed'}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="flex-grow"></div>
-      <button className="farm-button" onClick={handleFarmClick}>
-        {isFarming
-          ? `Farming... ${farmingPoints.toFixed(1)} PD (${60 - farmingTime}s left)`
-          : 'Farm PixelDogs...'}
-      </button>
-      <div className="footer-container">
-        <Link href="/">
-          <a className="flex flex-col items-center text-gray-800">
-            <i className="fas fa-home text-2xl"></i>
-            <p className="text-sm">Home</p>
-          </a>
-        </Link>
-        <Link href="/invite">
-          <a className="flex flex-col items-center text-gray-800">
-            <i className="fas fa-users text-2xl"></i>
-            <p className="text-sm">Friends</p>
-          </a>
-        </Link>
-        <Link href="/wallet">
-          <a className="flex flex-col items-center text-gray-800">
-            <i className="fas fa-wallet text-2xl"></i>
-            <p className="text-sm">Wallet</p>
-          </a>
-        </Link>
-      </div>
-    </div>
-  );
-}
+    );
+};
+
+export default HomeUI;

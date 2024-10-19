@@ -143,9 +143,9 @@ export default function Invite() {
             <p className="text-sm">Friends</p>
           </a>
         </Link>
-        <Link href="/wallet">
+        <Link href="/task">
           <a className="flex flex-col items-center text-gray-800">
-            <i className="fas fa-wallet text-2xl"></i>
+            <i className="fas fa-clipboard text-2xl"></i>
             <p className="text-sm">Wallet</p>
           </a>
         </Link>

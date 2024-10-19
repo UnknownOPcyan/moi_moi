@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
             claimedField = 'claimedButton2';
         } else if (buttonId === 'button3') {
             claimedField = 'claimedButton3';
+        } else if (buttonId === 'button4') {
+            claimedField = 'claimedButton4';
+        } else if (buttonId === 'button5') {
+            claimedField = 'claimedButton5';
+        } else if (buttonId === 'button6') {
+            claimedField = 'claimedButton6';
         }
 
         // Check if claimedField is valid

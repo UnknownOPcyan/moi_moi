@@ -1,81 +1,167 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { toggleUpdateText } from './utils';
+import './HomeUI.css';
 
-const HomeUI = ({ user, setUser }) => {
-    const [isFarming, setIsFarming] = useState(false); // Track farming status
-    const [countdown, setCountdown] = useState(60); // Countdown for farming duration
-    const [farmedPoints, setFarmedPoints] = useState(0); // Accumulated farming points
-    const [claimable, setClaimable] = useState(false); // Track if points can be claimed
+interface HomeUIProps {
+  user: any;
+  buttonStage1: 'check' | 'claim' | 'claimed';
+  buttonStage2: 'check' | 'claim' | 'claimed';
+  buttonStage3: 'check' | 'claim' | 'claimed';
+  isLoading: boolean;
+  notification: string;
+  handleButtonClick1: () => void;
+  handleButtonClick2: () => void;
+  handleButtonClick3: () => void;
+  handleClaim1: () => void;
+  handleClaim2: () => void;
+  handleClaim3: () => void;
+  handleFarmClick: () => void;
+}
 
-    // Function to start farming process
-    const startFarming = async () => {
-        if (!user) return; // Prevent if user isn't loaded
+export default function HomeUI({
+  user,
+  buttonStage1,
+  buttonStage2,
+  buttonStage3,
+  isLoading,
+  notification,
+  handleButtonClick1,
+  handleButtonClick2,
+  handleButtonClick3,
+  handleClaim1,
+  handleClaim2,
+  handleClaim3,
+  handleFarmClick,
+}: HomeUIProps) {
+  const [farmingStatus, setFarmingStatus] = useState<string>('Farm PixelDogs...');
+  const [currentFarmPoints, setCurrentFarmPoints] = useState<number>(0);
 
-        setIsFarming(true); // Set farming to active
-        setClaimable(false); // Reset claim status
-        setCountdown(60); // Reset countdown
-        setFarmedPoints(0); // Reset farmed points
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css';
+    document.head.appendChild(link);
+    toggleUpdateText();
+  }, []);
 
-        // API call to start farming
-        await fetch('/api/start-farming', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ telegramId: user.telegramId, action: 'start' }),
-        });
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (user.isFarming) {
+      setFarmingStatus('Farming...');
+      interval = setInterval(() => {
+        const now = new Date();
+        const lastFarm = new Date(user.lastFarmTime);
+        const elapsed = Math.floor((now.getTime() - lastFarm.getTime()) / 1000);
+        const points = Math.min(Math.floor(elapsed / 2), 60 - (user.farmingPoints || 0));
+        setCurrentFarmPoints(points);
+        setFarmingStatus(`Farming (${points} PD)...`);
+      }, 1000);
+    } else {
+      setFarmingStatus('Farm PixelDogs...');
+      setCurrentFarmPoints(0);
+    }
 
-        // Farming progress: increment points every second and countdown
-        const interval = setInterval(() => {
-            setCountdown((prev) => prev - 1); // Decrease countdown
-            setFarmedPoints((prev) => Math.min(3, (prev + 0.05).toFixed(2))); // Increment points by 0.05/sec
-        }, 1000);
-
-        // After 60 seconds, allow claiming
-        setTimeout(() => {
-            clearInterval(interval); // Stop farming
-            setIsFarming(false); // Reset farming status
-            setClaimable(true); // Set claimable to true
-        }, 60000); // 1 minute duration
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
     };
+  }, [user.isFarming, user.lastFarmTime, user.farmingPoints]);
 
-    // Function to claim farmed points
-    const claimPoints = async () => {
-        if (!user) return; // Prevent if user isn't loaded
-
-        // API call to claim farmed points
-        const res = await fetch('/api/start-farming', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ telegramId: user.telegramId, action: 'claim' }),
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            setClaimable(false); // Reset claimable status
-            setUser({ ...user, points: data.points }); // Update user's total points
-        }
-    };
-
-    return (
-        <div>
-            <button
-                onClick={isFarming ? null : claimable ? claimPoints : startFarming} // Button logic
-                disabled={isFarming} // Disable button during farming
-                className={isFarming ? 'disabled-button' : 'active-button'} // Style based on farming status
-            >
-                {isFarming
-                    ? `${farmedPoints} PxDogs (${countdown}s)`  // Show farming progress
-                    : claimable
-                    ? 'Claim 3 PixelDogs' // Show claim button after farming
-                    : 'Farm PixelDogs'} // Default button text
-            </button>
-
-            {/* Display user's total points */}
-            <div>Total Points: {user.points}</div>
+  return (
+    <div className="home-container">
+      <div className="header-container">
+        <div className="dog-image-container">
+          <img
+            alt="Animated style dog image"
+            className="dog-image"
+            src="https://storage.googleapis.com/a1aa/image/YlpvEfbklKRiDi8LX5Rww5U3zZZwHEUfju1qUNknpEZ6e2OnA.jpg"
+          />
         </div>
-    );
-};
-
-export default HomeUI;
+        <p id="pixelDogsCount" className="pixel-dogs-count">
+          {user.points} PixelDogs
+        </p>
+        <p id="updateText" className="update-text fade fade-in">
+          Exciting updates are on the way:)
+        </p>
+        <div className="tasks-container">
+          <button className="tasks-button">Daily Tasks..!</button>
+          <div className="social-container">
+            <p className="social-text">Follow Our Youtube!</p>
+            <button
+              onClick={() => {
+                if (buttonStage1 === 'check') {
+                  handleButtonClick1();
+                } else if (buttonStage1 === 'claim') {
+                  handleClaim1();
+                }
+              }}
+              disabled={buttonStage1 === 'claimed' || isLoading}
+              className={`claim-button ${
+                buttonStage1 === 'claimed' || isLoading ? 'disabled' : ''
+              }`}
+            >
+              {isLoading ? 'Claiming...' : buttonStage1 === 'check' ? 'Check' : buttonStage1 === 'claim' ? 'Claim' : 'Claimed'}
+            </button>
+          </div>
+          <div className="social-container">
+            <p className="social-text">Follow Our Twitter!</p>
+            <button
+              onClick={() => {
+                handleButtonClick2();
+                handleClaim2();
+              }}
+              disabled={buttonStage2 === 'claimed'}
+              className="claim-button"
+            >
+              {buttonStage2 === 'check' ? 'Check' : buttonStage2 === 'claim' ? 'Claim' : 'Claimed'}
+            </button>
+          </div>
+          <div className="social-container">
+            <p className="social-text">Join Our Telegram!</p>
+            <button
+              onClick={() => {
+                handleButtonClick3();
+                handleClaim3();
+              }}
+              disabled={buttonStage3 === 'claimed'}
+              className="claim-button"
+            >
+              {buttonStage3 === 'check' ? 'Check' : buttonStage3 === 'claim' ? 'Claim' : 'Claimed'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-grow"></div>
+      <button 
+        className="farm-button"
+        onClick={handleFarmClick}
+        disabled={isLoading}
+      >
+        {farmingStatus}
+      </button>
+      <div className="footer-container">
+        <Link href="/">
+          <a className="flex flex-col items-center text-gray-800">
+            <i className="fas fa-home text-2xl"></i>
+            <p className="text-sm">Home</p>
+          </a>
+        </Link>
+        <Link href="/invite">
+          <a className="flex flex-col items-center text-gray-800">
+            <i className="fas fa-users text-2xl"></i>
+            <p className="text-sm">Friends</p>
+          </a>
+        </Link>
+        <Link href="/task">
+          <a className="flex flex-col items-center text-gray-800">
+            <i className="fas fa-clipboard text-2xl"></i>
+            <p className="text-sm">Taskst</p>
+          </a>
+        </Link>
+      </div>
+    </div>
+  );
+}

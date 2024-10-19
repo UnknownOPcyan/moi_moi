@@ -1,84 +1,212 @@
-"use client"; // This ensures the component is treated as a Client Component
+'use client'
 
-import React, { useState, useEffect } from 'react';
-import HomeUI from './HomeUI'; // Ensure correct import path
-import { fetchUser } from './api/fetchUser'; // Update these imports
-import { startFarming } from './api/startFarming'; // Update these imports
-import { stopFarming } from './api/stopFarming'; // Update these imports
+import { useEffect, useState } from 'react'
+import { WebApp } from '@twa-dev/types'
+import HomeUI from './HomeUI'
 
-export default function Page() {
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [notification, setNotification] = useState('');
-  const [buttonStage1, setButtonStage1] = useState<'check' | 'claim' | 'claimed'>('check');
-  const [buttonStage2, setButtonStage2] = useState<'check' | 'claim' | 'claimed'>('check');
-  const [buttonStage3, setButtonStage3] = useState<'check' | 'claim' | 'claimed'>('check');
-  const [isFarming, setIsFarming] = useState(false);
-  const [farmingPoints, setFarmingPoints] = useState(0);
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: WebApp
+    }
+  }
+}
+
+export default function Home() {
+  const [user, setUser] = useState<any>(null)
+  const [inviterInfo, setInviterInfo] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notification, setNotification] = useState('')
+  const [buttonStage1, setButtonStage1] = useState<'check' | 'claim' | 'claimed'>('check')
+  const [buttonStage2, setButtonStage2] = useState<'check' | 'claim' | 'claimed'>('check')
+  const [buttonStage3, setButtonStage3] = useState<'check' | 'claim' | 'claimed'>('check')
+  const [isLoading, setIsLoading] = useState(false)
+  const [farmInterval, setFarmInterval] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp
+      tg.ready()
+
+      const initDataUnsafe = tg.initDataUnsafe || {}
+
+      if (initDataUnsafe.user) {
+        fetch('/api/user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...initDataUnsafe.user, start_param: initDataUnsafe.start_param || null })
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.error) {
+              setError(data.error)
+            } else {
+              setUser(data.user)
+              setInviterInfo(data.inviterInfo)
+              setButtonStage1(data.user.claimedButton1 ? 'claimed' : 'check')
+              setButtonStage2(data.user.claimedButton2 ? 'claimed' : 'check')
+              setButtonStage3(data.user.claimedButton3 ? 'claimed' : 'check')
+            }
+          })
+          .catch(() => {
+            setError('Failed to fetch user data')
+          })
+      } else {
+        setError('No user data available')
+      }
+    } else {
+      setError('This app should be opened in Telegram')
+    }
+  }, [])
+
+  const handleIncreasePoints = async (pointsToAdd: number, buttonId: string) => {
+    if (!user) return
+
+    try {
+      const res = await fetch('/api/increase-points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ telegramId: user.telegramId, pointsToAdd, buttonId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setUser({ ...user, points: data.points })
+        setNotification(`Points increased successfully! (+${pointsToAdd})`)
+        setTimeout(() => setNotification(''), 3000)
+      } else {
+        setError('Failed to increase points')
+      }
+    } catch {
+      setError('An error occurred while increasing points')
+    }
+  }
+
+  const handleFarmClick = async () => {
+    if (!user) return;
+
+    if (!user.isFarming) {
       try {
-        const fetchedUser = await fetchUser();
-        setUser(fetchedUser);
+        const res = await fetch('/api/farm-points', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ telegramId: user.telegramId, action: 'start' }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setUser({ ...user, isFarming: true, lastFarmTime: new Date() });
+          
+          // Set up interval to collect points
+          const interval = setInterval(async () => {
+            const collectRes = await fetch('/api/farm-points', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ telegramId: user.telegramId, action: 'collect' }),
+            });
+            const collectData = await collectRes.json();
+            
+            if (collectData.success) {
+              setUser(collectData.user);
+              if (!collectData.user.isFarming) {
+                if (farmInterval) {
+                  clearInterval(farmInterval);
+                  setFarmInterval(null);
+                }
+              }
+            }
+          }, 30000);
+          
+          setFarmInterval(interval);
+        }
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('Error starting farming:', error);
       }
-      setIsLoading(false);
+    }
+  };
+
+  const handleButtonClick1 = () => {
+    if (buttonStage1 === 'check') {
+      window.open('https://youtu.be/xvFZjo5PgG0', '_blank')
+      setButtonStage1('claim')
+    }
+  }
+
+  const handleButtonClick2 = () => {
+    if (buttonStage2 === 'check') {
+      window.open('https://twitter.com', '_blank')
+      setButtonStage2('claim')
+    }
+  }
+
+  const handleButtonClick3 = () => {
+    if (buttonStage3 === 'check') {
+      window.open('https://telegram.org', '_blank')
+      setButtonStage3('claim')
+    }
+  }
+
+  const handleClaim1 = () => {
+    if (buttonStage1 === 'claim') {
+      setIsLoading(true)
+      handleIncreasePoints(5, 'button1')
+      setTimeout(() => {
+        setButtonStage1('claimed')
+        setIsLoading(false)
+      }, 3000)
+    }
+  }
+
+  const handleClaim2 = () => {
+    if (buttonStage2 === 'claim') {
+      handleIncreasePoints(3, 'button2')
+      setButtonStage2('claimed')
+    }
+  }
+
+  const handleClaim3 = () => {
+    if (buttonStage3 === 'claim') {
+      handleIncreasePoints(9, 'button3')
+      setButtonStage3('claimed')
+    }
+  }
+
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => {
+      if (farmInterval) {
+        clearInterval(farmInterval);
+      }
     };
-    fetchData();
-  }, []);
+  }, [farmInterval]);
 
-  const handleStartFarming = async () => {
-    try {
-      const response = await startFarming();
-      if (response.success) {
-        setIsFarming(true);
-        setNotification('Farming started!');
-      } else {
-        setNotification('Error starting farming.');
-      }
-    } catch (error) {
-      console.error('Error starting farming:', error);
-      setNotification('An error occurred while starting farming.');
-    }
-  };
+  if (error) {
+    return <div className="container mx-auto p-4 text-red-500">{error}</div>
+  }
 
-  const handleStopFarming = async () => {
-    try {
-      const response = await stopFarming();
-      if (response.success) {
-        setFarmingPoints(response.farmedAmount);
-        setIsFarming(false);
-        setNotification('Farming stopped!');
-      } else {
-        setNotification('Error stopping farming.');
-      }
-    } catch (error) {
-      console.error('Error stopping farming:', error);
-      setNotification('An error occurred while stopping farming.');
-    }
-  };
+  if (!user) return <div className="container mx-auto p-4">Loading...</div>
 
   return (
-    <HomeUI
+    <HomeUI 
       user={user}
       buttonStage1={buttonStage1}
       buttonStage2={buttonStage2}
       buttonStage3={buttonStage3}
       isLoading={isLoading}
       notification={notification}
-      isFarming={isFarming}
-      farmingPoints={farmingPoints}
-      handleButtonClick1={() => setButtonStage1('claim')}
-      handleButtonClick2={() => setButtonStage2('claim')}
-      handleButtonClick3={() => setButtonStage3('claim')}
-      handleClaim1={() => setButtonStage1('claimed')}
-      handleClaim2={() => setButtonStage2('claimed')}
-      handleClaim3={() => setButtonStage3('claimed')}
-      handleStartFarming={handleStartFarming}
-      handleStopFarming={handleStopFarming}
+      handleButtonClick1={handleButtonClick1}
+      handleButtonClick2={handleButtonClick2}
+      handleButtonClick3={handleButtonClick3}
+      handleClaim1={handleClaim1}
+      handleClaim2={handleClaim2}
+      handleClaim3={handleClaim3}
+      handleFarmClick={handleFarmClick}
     />
-  );
+  )
 }

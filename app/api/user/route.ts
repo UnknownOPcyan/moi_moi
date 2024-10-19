@@ -20,10 +20,11 @@ export async function POST(req: NextRequest) {
         claimedButton1: true,
         claimedButton2: true,
         claimedButton3: true,
+        claimedButton5: true,
+        claimedButton4: true,
+        claimedButton6: true,
         invitedUsers: true,
-        invitedBy: true,
-        farmStartTime: true,
-        farmAmount: true
+        invitedBy: true
       }
     });
 
